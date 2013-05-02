@@ -1,6 +1,5 @@
 package com.johan.headtilter.client.headtilter;
 
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -11,6 +10,7 @@ import com.google.gwt.touch.client.Point;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.ui.Widget;
+import com.vaadin.shared.communication.SharedState;
 import com.vaadin.shared.ui.Connect;
 
 import com.johan.headtilter.HeadTilter;
@@ -24,16 +24,18 @@ import com.vaadin.client.extensions.AbstractExtensionConnector;
 public class HeadTilterConnector extends AbstractExtensionConnector {
 
 	private static Widget extendedWidget;
-	private String rotationStringBrowserSpecific;
+	private String transformStringBrowserSpecific;
 	private Element canvas;
 	private Element video;
 	private HeadTilterMode mode = HeadTilterMode.MOUSE_CURSOR;
 	private HeadClickTracker hcTracker;
 
+	private float firstHeadWidth = -1;
+
 	// This guy decides when and where a click has occurred
 	private static class HeadClickTracker {
 		/**
-		 * Move head to the left, over 15 degree limit, then inside some time,
+		 * Move head to the left, over 12 degree limit, then inside some time,
 		 * move back = click
 		 * 
 		 * @author johan
@@ -42,6 +44,27 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		private float angleSensitivity = 0.12f; // radians, TODO
 		private float coordinateSensitivity = 2f;
 
+		/*
+		 * private Integer leftCalibrated = null; private Integer
+		 * rightCalibrated = null; private Integer topCalibrated = null; private
+		 * Integer bottomCalibrated = null;
+		 * 
+		 * public void setLeftCalibrated(Integer leftCalibrated) {
+		 * this.leftCalibrated = leftCalibrated; }
+		 * 
+		 * public void setRightCalibrated(Integer rightCalibrated) {
+		 * this.rightCalibrated = rightCalibrated; }
+		 * 
+		 * public void setTopCalibrated(Integer topCalibrated) {
+		 * this.topCalibrated = topCalibrated; }
+		 * 
+		 * public void setBottomCalibrated(Integer bottomCalibrated) {
+		 * this.bottomCalibrated = bottomCalibrated; }
+		 * 
+		 * public boolean isCalibrated() { return leftCalibrated != null &&
+		 * rightCalibrated != null && topCalibrated != null && bottomCalibrated
+		 * != null; }
+		 */
 		private boolean checkIfClickPatternFound() {
 			boolean containsOverLimit = false;
 			boolean containsUnderLimit = false;
@@ -56,7 +79,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 
 			return containsOverLimit && containsUnderLimit;
 		}
-		
+
 		private Point createAveragePointFrom(List<Point> pList) {
 			int lSize = pList.size();
 			double xTot = 0;
@@ -80,17 +103,21 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 				float yAverageVal = 0;
 				int examined = 0;
 
-
-
 				for (Point point : lastHeadPositions) {
-					if (examined >= limit || occurrences >= 4) break; // Only step back 'limit' amount of steps or that we have enough occurrences
-					
-					if (xAverageVal > 0 || (point.getX() <= xAverageVal / occurrences + coordinateSensitivity
-							&& point.getX() >= xAverageVal / occurrences
-									- coordinateSensitivity
-							&& point.getY() <= yAverageVal / occurrences
+					if (examined >= limit || occurrences >= 4)
+						break; // Only step back 'limit' amount of steps or that
+								// we have enough occurrences
+
+					if (xAverageVal > 0
+							|| (point.getX() <= xAverageVal / occurrences
 									+ coordinateSensitivity
-							&& point.getY() >= yAverageVal / occurrences
+									&& point.getX() >= xAverageVal
+											/ occurrences
+											- coordinateSensitivity
+									&& point.getY() <= yAverageVal
+											/ occurrences
+											+ coordinateSensitivity && point
+									.getY() >= yAverageVal / occurrences
 									- coordinateSensitivity)) {
 						xAverageVal += point.getX();
 						yAverageVal += point.getY();
@@ -102,11 +129,13 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 					}
 					examined++;
 				}
-				
+
 				if (occurrences >= 4) {
-					return new Point(xAverageVal / occurrences, yAverageVal / occurrences);
+					return new Point(xAverageVal / occurrences, yAverageVal
+							/ occurrences);
 				} else {
-					return createAveragePointFrom(lastHeadPositions.subList(0, limit));
+					return createAveragePointFrom(lastHeadPositions.subList(0,
+							limit));
 				}
 
 			} else {
@@ -138,6 +167,11 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 			return null;
 		}
 
+		public Point calculateCursorPositionOnScreen(float x, float y,
+				float width, float height) {
+			return null;
+		}
+
 	}
 
 	public HeadTilterConnector() {
@@ -147,10 +181,10 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 	@Override
 	protected void init() {
 		super.init();
-		rotationStringBrowserSpecific = "transform";
+		transformStringBrowserSpecific = "transform";
 		String prefix = getBrowserPrefix();
 		if (prefix != null) {
-			rotationStringBrowserSpecific = getBrowserPrefix() + "Transform";
+			transformStringBrowserSpecific = getBrowserPrefix() + "Transform";
 		}
 		declareHeadMoveEventMethod(this);
 		registerHeadTiltingListeners();
@@ -174,7 +208,21 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 	@Override
 	public void onStateChanged(StateChangeEvent stateChangeEvent) {
 		super.onStateChanged(stateChangeEvent);
+		/*
+		 * if (stateChangeEvent.hasPropertyChanged("leftCalibrated")) {
+		 * hcTracker.setLeftCalibrated(getState().leftCalibrated); } if
+		 * (stateChangeEvent.hasPropertyChanged("rightCalibrated")) {
+		 * hcTracker.setLeftCalibrated(getState().rightCalibrated); } if
+		 * (stateChangeEvent.hasPropertyChanged("topCalibrated")) {
+		 * hcTracker.setLeftCalibrated(getState().topCalibrated); } if
+		 * (stateChangeEvent.hasPropertyChanged("bottomCalibrated")) {
+		 * hcTracker.setLeftCalibrated(getState().bottomCalibrated); }
+		 */
+	}
 
+	@Override
+	public HeadTilterState getState() {
+		return (HeadTilterState) super.getState();
 	}
 
 	@Override
@@ -216,10 +264,22 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 						.getElement()
 						.getStyle()
 						.setProperty(
-								rotationStringBrowserSpecific,
+								transformStringBrowserSpecific,
 								"rotate(" + (-angle * (180 / 3.1415) + 90)
 										+ "deg)");
+
 			}
+			
+		} else if (mode == HeadTilterMode.MAGNIFIER) {
+			if (firstHeadWidth == -1)
+				firstHeadWidth = width;
+			extendedWidget
+			.getElement()
+			.getStyle()
+			.setProperty(
+					transformStringBrowserSpecific,
+					"scale(" + (width / firstHeadWidth) + ")");
+
 		} else {
 
 			Point clickPt = hcTracker.isHeadClick(x, y, angle);
