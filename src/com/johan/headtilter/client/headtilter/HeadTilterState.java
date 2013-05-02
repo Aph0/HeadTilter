@@ -5,11 +5,22 @@ import com.vaadin.shared.AbstractComponentState;
 public class HeadTilterState extends AbstractComponentState {
 
 	
-	public HeadTilterMode mode = HeadTilterMode.TILT_WIDGETS;
+	private HeadTilterMode mode = HeadTilterMode.TILT_WIDGETS;
 	
-	public Integer leftCalibrated = null;
-	public Integer rightCalibrated = null;
-	public Integer topCalibrated = null;
-	public Integer bottomCalibrated = null;
+	// When this counter is incremented, head position will be used as middle
+	public int headCalibratedForMiddleCounter = 0;
+	
+	public float upDownSensitivity = 7;
+	
+	public float leftRightSensitivity = 4;
+
+	public HeadTilterMode getMode() {
+		return mode;
+	}
+
+	public void setMode(HeadTilterMode mode) {
+		this.mode = mode;
+	}
+
 
 }

@@ -1,5 +1,6 @@
 package com.johan.headtilter;
 
+import com.johan.headtilter.client.headtilter.HeadTilterMode;
 import com.vaadin.annotations.Theme;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.ui.Alignment;
@@ -23,7 +24,8 @@ public class HeadtilterUI extends UI {
     private VerticalLayout mainLayout;
     private Label hitLabel = new Label();
     private Label recordLabel = new Label();
-    private String funModeTExt = "omg lol.";
+	private HeadTilter htExt;
+	private VerticalLayout loginView;
 
     @Override
     protected void init(VaadinRequest request) {
@@ -31,12 +33,13 @@ public class HeadtilterUI extends UI {
         mainLayout.setSizeFull();
         mainLayout.setSpacing(true);
         setContent(mainLayout);
-        HeadTilter ht = new HeadTilter();
+        htExt = new HeadTilter();
+        htExt.setHeadTilterMode(HeadTilterMode.MOUSE_CURSOR);
 
 
-        VerticalLayout l = createLoginView();
-        ht.extend(l);
-        setView(l);
+         loginView = createLoginView();
+        htExt.extend(loginView);
+        setView(loginView);
     }
 
     private void setView(Layout view) {
@@ -47,7 +50,7 @@ public class HeadtilterUI extends UI {
     }
 
     private VerticalLayout createLoginView() {
-
+    	if (loginView != null) return loginView;
         final VerticalLayout layout = new VerticalLayout();
         hitLabel.setWidth(null);
         recordLabel.setWidth(null);
@@ -72,16 +75,15 @@ public class HeadtilterUI extends UI {
         }));
 
         hl.addComponent(new Button("No pass?"));
-        final Button funnyB = new Button("FunMode");
+        final Button funnyB = new Button("Calibrate!");
         hl.addComponent(funnyB);
         funnyB.setData(new Boolean(false));
         funnyB.addClickListener(new Button.ClickListener() {
 
             @Override
             public void buttonClick(ClickEvent event) {
-                funnyB.setData(!(Boolean) funnyB.getData());
-                funnyB.setCaption((Boolean) funnyB.getData() ? funModeTExt
-                        : "FunMode");
+                funnyB.setCaption("Calibrated");
+                htExt.updateHeadCalibratedInMiddle();
             }
         });
 
