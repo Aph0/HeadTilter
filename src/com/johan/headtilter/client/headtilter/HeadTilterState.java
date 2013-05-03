@@ -14,6 +14,8 @@ public class HeadTilterState extends AbstractComponentState {
 	
 	public float leftRightSensitivity = 4;
 
+	public int fps = 20;
+
 	public HeadTilterMode getMode() {
 		return mode;
 	}

@@ -33,12 +33,13 @@ public class HeadtilterUI extends UI {
         mainLayout.setSizeFull();
         mainLayout.setSpacing(true);
         setContent(mainLayout);
-        htExt = new HeadTilter();
+        htExt = new HeadTilter(15);
         htExt.setHeadTilterMode(HeadTilterMode.MOUSE_CURSOR);
 
 
          loginView = createLoginView();
-        htExt.extend(loginView);
+//htExt.extend(loginView);
+htExt.extend(mainLayout);
         setView(loginView);
     }
 

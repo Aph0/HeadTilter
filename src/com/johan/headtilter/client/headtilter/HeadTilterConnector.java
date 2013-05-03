@@ -1,5 +1,6 @@
 package com.johan.headtilter.client.headtilter;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -10,6 +11,8 @@ import com.google.gwt.dom.client.Style.Visibility;
 import com.google.gwt.touch.client.Point;
 import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Element;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.EventListener;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Widget;
 import com.vaadin.shared.communication.SharedState;
@@ -19,8 +22,10 @@ import com.johan.headtilter.HeadTilter;
 import com.vaadin.client.BrowserInfo;
 import com.vaadin.client.ComponentConnector;
 import com.vaadin.client.ServerConnector;
+import com.vaadin.client.Util;
 import com.vaadin.client.communication.StateChangeEvent;
 import com.vaadin.client.extensions.AbstractExtensionConnector;
+import com.vaadin.client.ui.VButton;
 
 @Connect(HeadTilter.class)
 public class HeadTilterConnector extends AbstractExtensionConnector {
@@ -29,14 +34,17 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 	private String transformStringBrowserSpecific;
 	private Element canvas;
 	private Element video;
-	private HeadTilterMode mode = HeadTilterMode.MOUSE_CURSOR;
+	private HeadTilterMode mode = HeadTilterMode.TILT_WIDGETS;
 	private HeadClickTracker hcTracker;
 
 	private float firstHeadWidth = -1;
 	private Element mousePtr;
 	private int canvasWidth = 320;
 	private int canvasHeight = 240;
-
+	
+	private int fps = 15;
+	
+	private boolean cameraInitiated = false;
 	// This guy decides when and where a click has occurred
 	private class HeadClickTracker {
 		/**
@@ -46,19 +54,27 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		 * @author johan
 		 * 
 		 */
-		private float angleSensitivity = 0.12f; // radians, TODO
+		private float angleSensitivity = 0.09f; // radians, TODO
 		private float leftRightSensitivity = 2f;
 		private float upDownSensitivity = 5f;
-		private int calibratedUpdate = 0;
 		
 		private int headCenteredX = 0;
 		private int headCenteredY = 0;
+
+
 		
 
 		private LinkedList<Point> lastHeadPositions = new LinkedList<Point>();
 
 		private LinkedList<Float> lastAngles = new LinkedList<Float>();
+		/**
+		 * Current non-transformed x
+		 */
 		private int currentX = -1;
+		
+		/**
+		 * Current non-transformed y
+		 */
 		private int currentY = -1;
 
 
@@ -100,7 +116,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		// Only estimates for the canvas. After this, you
 		// Need to transform the point in accordance with the calibration
 		private Point estimateHeadClickPosition() {
-			int limit = 10; // TODO, create some var
+			int limit = (fps * 2) / 3; 
 
 			if (lastHeadPositions.size() <= 0)
 				return null;
@@ -134,7 +150,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 					examined++;
 				}
 
-				if (occurrences >= 4) {
+				if (occurrences >=  3 + fps / 15) {
 					return new Point(xAverageVal / occurrences, yAverageVal
 							/ occurrences);
 				} else {
@@ -149,17 +165,17 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		}
 
 		/**
-		 * Returns a Point(x, y) if there was a click, otherwise null
+		 * Returns a Point(translate(x), translate(y)) if there was a click, otherwise null
 		 */
 		public Point isHeadClick(float x, float y, float angle) {
 			lastHeadPositions.addFirst(new Point(x, y));
 			lastAngles.addFirst(angle);
-			if (lastHeadPositions.size() > 20) {
+			if (lastHeadPositions.size() > (fps * 4) / 3) {
 				lastHeadPositions.removeLast();
 				lastAngles.removeLast();
 			}
 			if (checkIfClickPatternFound()) {
-				Point clicked = estimateHeadClickPosition();
+				Point clicked = transformPointToConformCalibration(estimateHeadClickPosition());
 				lastHeadPositions.clear();
 				lastAngles.clear();
 				return clicked;
@@ -237,12 +253,21 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 	@Override
 	public void onStateChanged(StateChangeEvent stateChangeEvent) {
 		super.onStateChanged(stateChangeEvent);
-		
+		if (!cameraInitiated) {
+			cameraInitiated = true;
+			initiateHeadTilter(1000 / getState().fps);
+			this.fps = getState().fps;
+		}
 		hcTracker.setUpDownSensitivity(getState().upDownSensitivity);
 		hcTracker.setLeftRightSensitivity(getState().leftRightSensitivity);
+		if (stateChangeEvent.hasPropertyChanged("mode")) {
+			setMode(getState().getMode());
+		}
 		if (stateChangeEvent.hasPropertyChanged("headCalibratedForMiddleCounter")) {
 			hcTracker.setHeadCenteredRequest();
 		}
+		
+		
 
 	}
 
@@ -278,7 +303,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 			video.getStyle().setVisibility(Visibility.HIDDEN);
 			Document.get().getBody().appendChild(video);
 		}
-		initiateHeadTilter();
+
 	}
 
 	public void handleHeadMoveEvent(float x, float y, float angle,
@@ -311,6 +336,13 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 			Point clickPt = hcTracker.isHeadClick(x, y, angle);
 			if (clickPt != null) {
 				System.out.println("Headclick at: " + clickPt);
+				
+				Element headClickedElement = getElementFromPoint((int)clickPt.getX(), (int)clickPt.getY());
+				headClickedElement.focus();
+				VButton button = Util.findWidget(headClickedElement, VButton.class);
+				if (button != null) {
+					button.onClick();
+				}
 			}
 		}
 		System.out.println("moved x: " + x + " y: " + y + " angle: " + angle
@@ -318,6 +350,10 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		if (clickedWithHead)
 			System.out.println("HEADLICK!");
 	}
+	
+    private native Element getElementFromPoint(int x, int y) /*-{
+    	return $wnd.document.elementFromPoint(x, y);
+	}-*/;
 
 	public static native void declareHeadMoveEventMethod(
 			HeadTilterConnector headTilterConnector) /*-{
@@ -328,10 +364,10 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 														}
 														}-*/;
 
-	private native void initiateHeadTilter() /*-{
+	private native void initiateHeadTilter(int dInterval) /*-{
 												var videoInput = $wnd.document.getElementById('inputVideo');
 												var canvasInput = $wnd.document.getElementById('inputCanvas');
-												var htracker = new $wnd.headtrackr.Tracker({detectionInterval : 75, calcAngles : true});
+												var htracker = new $wnd.headtrackr.Tracker({detectionInterval : dInterval, calcAngles : true});
 												$entry(htracker);
 												htracker.init(videoInput, canvasInput);
 												htracker.start();
@@ -389,5 +425,34 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		}
 		
 	}
+	
+	
+    @SuppressWarnings("unchecked")
+    public static <T> T findWidget(Element element,
+            ArrayList<Class<? extends Widget>> classes) {
+        if (element != null) {
+            /* First seek for the first EventListener (~Widget) from dom */
+            EventListener eventListener = null;
+            while (eventListener == null && element != null) {
+                eventListener = Event.getEventListener(element);
+                if (eventListener == null) {
+                    element = (Element) element.getParentElement();
+                }
+            }
+            if (eventListener != null) {
+
+                Widget w = (Widget) eventListener;
+                while (w != null) {
+                    for (Class<? extends Widget> class1 : classes) {
+                        if (class1 == null || w.getClass() == class1) {
+                            return (T) w;
+                        }
+                    }
+                    w = w.getParent();
+                }
+            }
+        }
+        return null;
+    }
 
 }

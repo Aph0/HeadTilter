@@ -10,8 +10,8 @@ import com.vaadin.server.AbstractExtension;
 public class HeadTilter extends AbstractExtension {
 
 
-    public HeadTilter() {
-    	
+    public HeadTilter(int fps) {
+    	getState().fps = fps;
     }
     
     @Override
