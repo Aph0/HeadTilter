@@ -1,0 +1,17 @@
+.headclick_arrow {
+	background: transparent url(img/arrow.png) no-repeat top left;
+	width: 15px;
+	height: 20px;
+	z-index: 10000;
+}
+
+.headclick_arrow_clicked {
+	background: transparent url(img/arrow_red.png) no-repeat top left;
+	width: 15px;
+	height: 20px;
+	z-index: 10000;
+}
+
+#headtrackerMessageDiv {
+	visibility: hidden !important;
+}

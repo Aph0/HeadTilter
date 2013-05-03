@@ -13,6 +13,7 @@ import com.google.gwt.user.client.DOM;
 import com.google.gwt.user.client.Element;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.EventListener;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Widget;
 import com.vaadin.shared.communication.SharedState;
@@ -336,12 +337,17 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 			Point clickPt = hcTracker.isHeadClick(x, y, angle);
 			if (clickPt != null) {
 				System.out.println("Headclick at: " + clickPt);
-				
+				// Hide mouse pointer so that it is not selected as the clicked element
+				mousePtr.getStyle().setVisibility(Visibility.HIDDEN);
 				Element headClickedElement = getElementFromPoint((int)clickPt.getX(), (int)clickPt.getY());
-				headClickedElement.focus();
-				VButton button = Util.findWidget(headClickedElement, VButton.class);
-				if (button != null) {
-					button.onClick();
+				mousePtr.getStyle().setVisibility(Visibility.VISIBLE);
+				createClickArtifact((int)clickPt.getX(), (int)clickPt.getY());
+				if (headClickedElement != null)  {
+					headClickedElement.focus();
+					VButton button = Util.findWidget(headClickedElement, VButton.class);
+					if (button != null) {
+						button.onClick();
+					}					
 				}
 			}
 		}
@@ -403,13 +409,33 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 		createOrRemoveArtificialMousePointer();
 	}
 
+	private void createClickArtifact(int x, int y) {
+		final Element artifact = DOM.createDiv();
+		artifact.setClassName("headclick_arrow_clicked");
+		artifact.getStyle().setPosition(Position.ABSOLUTE);
+		artifact.getStyle().setLeft(x, Unit.PX);
+		artifact.getStyle().setTop(y, Unit.PX);
+		Document.get().getBody().appendChild(artifact);
+		Timer t = new Timer() {
+			
+			@Override
+			public void run() {
+				com.google.gwt.dom.client.Element parent = artifact.getParentElement();
+				if (parent == null) return;
+				artifact.getParentElement().removeChild(artifact);
+				
+			}
+		};
+		t.schedule(1000);
+	}
+	
 	private void createOrRemoveArtificialMousePointer() {
 		// Lets only create one element, or remove if not needed
 		Element elem = DOM.getElementById("mouse_cursor_headtilter");
 		if (mode == HeadTilterMode.MOUSE_CURSOR) {
 			if (elem == null) {
 				mousePtr = DOM.createDiv();
-				mousePtr.setInnerText("X");
+				mousePtr.setClassName("headclick_arrow");
 				// Stuff like this has to be taken into account when scrolling
 				mousePtr.getStyle().setPosition(Position.ABSOLUTE);
 				Document.get().getBody().appendChild(mousePtr);

@@ -38,8 +38,8 @@ public class HeadtilterUI extends UI {
 
 
          loginView = createLoginView();
-//htExt.extend(loginView);
-htExt.extend(mainLayout);
+htExt.extend(loginView);
+//htExt.extend(mainLayout);
         setView(loginView);
     }
 
