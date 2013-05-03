@@ -234,7 +234,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 			transformStringBrowserSpecific = getBrowserPrefix() + "Transform";
 		}
 		declareHeadMoveEventMethod(this);
-		registerHeadTiltingListeners();
+		createNeededDivs();
 	}
 
 	private String getBrowserPrefix() {
@@ -284,7 +284,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 
 	}
 
-	private void registerHeadTiltingListeners() {
+	private void createNeededDivs() {
 		if (DOM.getElementById("inputCanvas") == null) {
 			canvas = DOM.createElement("canvas");
 			canvas.setId("inputCanvas");
