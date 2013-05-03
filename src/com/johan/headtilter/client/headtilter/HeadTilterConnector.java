@@ -97,6 +97,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 
 		private Point createAveragePointFrom(List<Point> pList) {
 			int lSize = pList.size();
+			if (lSize <= 0) return new Point(0, 0);
 			double xTot = 0;
 			double yTot = 0;
 			for (Point p : lastHeadPositions) {
@@ -351,8 +352,7 @@ public class HeadTilterConnector extends AbstractExtensionConnector {
 				}
 			}
 		}
-		System.out.println("moved x: " + x + " y: " + y + " angle: " + angle
-				+ "   height: " + height + " width: " + width);
+
 		if (clickedWithHead)
 			System.out.println("HEADLICK!");
 	}

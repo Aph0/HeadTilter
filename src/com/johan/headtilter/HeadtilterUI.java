@@ -34,7 +34,9 @@ public class HeadtilterUI extends UI {
         mainLayout.setSpacing(true);
         setContent(mainLayout);
         htExt = new HeadTilter(15);
-        htExt.setHeadTilterMode(HeadTilterMode.MOUSE_CURSOR);
+        
+        
+        htExt.setHeadTilterMode(HeadTilterMode.TILT_WIDGETS);
 
 
          loginView = createLoginView();
